@@ -108,4 +108,7 @@ FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
 # --- Celery ---
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://172.22.230.118:5173"]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://coffre-frontend.vercel.app",
+]
