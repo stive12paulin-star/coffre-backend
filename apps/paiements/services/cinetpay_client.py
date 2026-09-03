@@ -14,9 +14,10 @@ inscrit, ou auprès de support@cinetpay.com avant la mise en production.
 import requests
 from django.conf import settings
 
-BASE_CHECKOUT_URL = "https://api-checkout.cinetpay.com/v2"
-BASE_TRANSFER_URL = "https://client.cinetpay.com/v1"
-BASE_SMS_URL = "https://api-notitia.cinetpay.com/sms/1"
+BASE_URL = "https://api.cinetpay.net"
+BASE_CHECKOUT_URL = BASE_URL
+BASE_TRANSFER_URL = BASE_URL
+BASE_SMS_URL = BASE_URL
 
 
 class CinetPayError(Exception):
@@ -25,9 +26,19 @@ class CinetPayError(Exception):
 
 class CinetPayClient:
     def __init__(self):
-        self.apikey = settings.CINETPAY_APIKEY
-        self.site_id = settings.CINETPAY_SITE_ID
-        self.apikey_sms = settings.CINETPAY_SMS_APIKEY  # compte SMS séparé du compte marchand
+        self.api_key = settings.CINETPAY_APIKEY
+        self.api_password = settings.CINETPAY_API_PASSWORD
+        self.apikey_sms = settings.CINETPAY_SMS_APIKEY
+        self._token = None
+
+    def _obtenir_token(self):
+        if self._token:
+            return self._token
+        payload = {"api_key": self.api_key, "api_password": self.api_password}
+        reponse = requests.post(f"{BASE_URL}/v1/oauth/login", json=payload, timeout=15)
+        data = reponse.json()
+        self._token = data["access_token"]  # nom exact du champ a confirmer
+        return self._token
 
     # ---------------------------------------------------------------
     # ENCAISSEMENT (dépôt dans le coffre) — confirmé par la doc
