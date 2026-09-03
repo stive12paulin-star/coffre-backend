@@ -44,30 +44,34 @@ class CinetPayClient:
     # ENCAISSEMENT (dépôt dans le coffre) — confirmé par la doc
     # ---------------------------------------------------------------
 
-    def initier_paiement(self, transaction_id, montant, telephone, nom, prenom, notify_url, return_url):
-        """
-        Démarre un dépôt. Retourne le payment_token à utiliser pour rediriger
-        l'utilisateur vers le guichet de paiement CinetPay.
-        """
-        payload = {
-            "apikey": self.apikey,
-            "site_id": self.site_id,
-            "transaction_id": transaction_id,
-            "amount": int(montant),  # XOF n'a pas de sous-unité
-            "currency": "XOF",
-            "description": "Dépôt coffre",
-            "customer_name": nom,
-            "customer_surname": prenom,
-            "customer_phone_number": telephone,
-            "notify_url": notify_url,
-            "return_url": return_url,
-            "channels": "MOBILE_MONEY",
-        }
-        reponse = requests.post(f"{BASE_CHECKOUT_URL}/payment", json=payload, timeout=15)
-        data = reponse.json()
-        if data.get("code") != "201":
-            raise CinetPayError(data.get("description", "Échec de l'initialisation du paiement"))
-        return data["data"]["payment_token"]
+   def initier_paiement(self, transaction_id, montant, telephone, nom, prenom, email, notify_url, success_url, failed_url):
+    """
+    Demarre un depot. Retourne payment_url pour rediriger
+    l'utilisateur vers le guichet de paiement CinetPay.
+    """
+    token = self._obtenir_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = {
+        "currency": "XOF",
+        "merchant_transaction_id": transaction_id,
+        "amount": int(montant),
+        "lang": "fr",
+        "designation": "Depot coffre",
+        "client_first_name": prenom,
+        "client_last_name": nom,
+        "client_email": email,
+        "client_phone_number": telephone,
+        "success_url": success_url,
+        "failed_url": failed_url,
+        "notify_url": notify_url,
+        "direct_pay": False,
+    }
+    reponse = requests.post(f"{BASE_URL}/v1/payment", json=payload, headers=headers, timeout=15)
+    data = reponse.json()
+    if data.get("code") != 200:
+        raise CinetPayError(data.get("status"), "Echec de l'initialisation du paiement")
+    return data["payment_url"]
+
 
     def verifier_paiement(self, transaction_id):
         """
