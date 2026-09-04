@@ -73,21 +73,16 @@ class CinetPayClient:
     return data["payment_url"]
 
 
-    def verifier_paiement(self, transaction_id):
-        """
-        À appeler à chaque réception du webhook /api/webhooks/cinetpay.
-
-        Rappel doc CinetPay : le POST reçu sur notify_url ne contient PAS le
-        statut réel (anti man-in-the-middle) — seul cpm_trans_id est fiable.
-        Le vrai statut ne vient QUE de cet appel de vérification.
-        """
-        payload = {
-            "apikey": self.apikey,
-            "site_id": self.site_id,
-            "transaction_id": transaction_id,
-        }
-        reponse = requests.post(f"{BASE_CHECKOUT_URL}/payment/check", json=payload, timeout=15)
-        return reponse.json()
+   def verifier_paiement(self, transaction_id):
+    """
+    A appeler a chaque reception du webhook /api/webhooks/cinetpay.
+    Verifie le vrai statut via l'API (GET), ne jamais se fier
+    uniquement au webhook.
+    """
+    token = self._obtenir_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    reponse = requests.get(f"{BASE_URL}/v1/payment/{transaction_id}", headers=headers, timeout=15)
+    return reponse.json()
 
     # ---------------------------------------------------------------
     # TRANSFERT (retrait depuis le coffre) — flux confirmé,
