@@ -126,20 +126,15 @@ def envoyer_argent(self, transaction_id, telephone, montant, operateur, notify_u
     reponse = requests.post(f"{BASE_URL}/v1/transfer", json=payload, headers=headers, timeout=15)
     return reponse.json()
 
-    def verifier_transfert(self, transaction_id):
-        """
-        Vérifie le statut réel d'un retrait — même logique que pour
-        l'encaissement : ne jamais se fier uniquement au webhook.
-        Endpoint confirmé par la doc ; nom exact du champ de statut renvoyé
-        à confirmer avec ton compte marchand.
-        """
-        token = self._obtenir_token_transfert()
-        headers = {"Authorization": f"Bearer {token}"}
-        payload = {"transaction_id": transaction_id}  # nom de champ à confirmer
-        reponse = requests.post(
-            f"{BASE_TRANSFER_URL}/transfer/check/money", json=payload, headers=headers, timeout=15
-        )
-        return reponse.json()
+   def verifier_transfert(self, transaction_id):
+    """
+    Verifie le statut reel d'un retrait - meme logique que pour
+    l'encaissement : ne jamais se fier uniquement au webhook.
+    """
+    token = self._obtenir_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    reponse = requests.get(f"{BASE_URL}/v1/transfer/{transaction_id}", headers=headers, timeout=15)
+    return reponse.json()
 
     # ---------------------------------------------------------------
     # SMS (OTP inscription et retraits) — confirmé par la doc
