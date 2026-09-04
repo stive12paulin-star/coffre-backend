@@ -18,6 +18,12 @@ BASE_URL = "https://api.cinetpay.net"
 BASE_CHECKOUT_URL = BASE_URL
 BASE_TRANSFER_URL = BASE_URL
 BASE_SMS_URL = BASE_URL
+CODES_OPERATEURS = {
+    "orange": "OM_CI",
+    "mtn": "MTN_CI",
+    "moov": "MOOV_CI",
+    "wave": "WAVE_CI",
+}
 
 
 class CinetPayError(Exception):
@@ -100,38 +106,25 @@ class CinetPayClient:
             raise CinetPayError(data.get("description", "Échec d'authentification transfert"))
         return data["data"]["token"]
 
-    def ajouter_contact(self, telephone, nom, prenom):
-        """
-        Prérequis documenté : le numéro du bénéficiaire doit exister dans la
-        liste de contacts CinetPay AVANT de pouvoir lui envoyer de l'argent.
-        À appeler une fois par utilisateur (idempotent côté CinetPay).
-        """
-        token = self._obtenir_token_transfert()
-        headers = {"Authorization": f"Bearer {token}"}
-        payload = {"data": [{"prefix": "225", "phone": telephone, "name": nom, "surname": prenom}]}
-        reponse = requests.post(
-            f"{BASE_TRANSFER_URL}/transfer/contact", json=payload, headers=headers, timeout=15
-        )
-        return reponse.json()
-
-    def envoyer_argent(self, telephone, montant, notify_url):
-        """
-        ⚠️ Par défaut, CinetPay exige une confirmation MANUELLE du marchand
-        pour chaque transfert (back-office ou email). Un flux 100% automatique
-        nécessite une autorisation spéciale de CinetPay (IP serveur à
-        whitelister) — à demander à support@cinetpay.com avant la prod.
-        En attendant cette autorisation, prévoir une file d'attente de
-        validation côté admin Django pour les retraits.
-        """
-        token = self._obtenir_token_transfert()
-        headers = {"Authorization": f"Bearer {token}"}
-        payload = {
-            "data": [{"prefix": "225", "phone": telephone, "amount": int(montant), "notify_url": notify_url}]
-        }
-        reponse = requests.post(
-            f"{BASE_TRANSFER_URL}/transfer/money/send/contact", json=payload, headers=headers, timeout=15
-        )
-        return reponse.json()
+def envoyer_argent(self, transaction_id, telephone, montant, operateur, notify_url):
+    """
+    Effectue un retrait/transfert vers mobile money.
+    'operateur' = la valeur stockee sur l'utilisateur (orange/mtn/moov/wave).
+    Plus besoin d'ajouter le contact au prealable (nouveau systeme).
+    """
+    token = self._obtenir_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = {
+        "currency": "XOF",
+        "payment_method": CODES_OPERATEURS.get(operateur, "OM_CI"),
+        "merchant_transaction_id": transaction_id,
+        "amount": int(montant),
+        "phone_number": telephone,
+        "reason": "Retrait coffre",
+        "notify_url": notify_url,
+    }
+    reponse = requests.post(f"{BASE_URL}/v1/transfer", json=payload, headers=headers, timeout=15)
+    return reponse.json()
 
     def verifier_transfert(self, transaction_id):
         """
