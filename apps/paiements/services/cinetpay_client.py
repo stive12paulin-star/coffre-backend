@@ -45,14 +45,19 @@ class CinetPayClient:
         payload = {"api_key": self.api_key, "api_password": self.api_password}
         reponse = requests.post(f"{BASE_URL}/v1/oauth/login", json=payload, timeout=15)
         data = reponse.json()
-        logger.warning(f"[DEBUG OAUTH] reponse brute recue : {data}")
+        logger.warning(f"[DEBUG OAUTH] status HTTP={reponse.status_code} reponse complete={data}")
+
         for cle in ("access_token", "token", "accessToken", "jwt", "id_token"):
             if cle in data:
                 self._token = data[cle]
                 return self._token
-        raise CinetPayError(
-            f"Champ du jeton introuvable dans la reponse OAuth. Cles disponibles : {list(data.keys())}"
-        )
+        if isinstance(data.get("data"), dict):
+            for cle in ("access_token", "token", "accessToken", "jwt", "id_token"):
+                if cle in data["data"]:
+                    self._token = data["data"][cle]
+                    return self._token
+
+        raise CinetPayError(f"Echec login OAuth CinetPay. Reponse complete : {data}")
 
     # ------------------------------------------------------------
     # ENCAISSEMENT (depot dans le coffre)
