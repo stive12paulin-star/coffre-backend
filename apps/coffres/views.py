@@ -66,8 +66,10 @@ class CoffreViewSet(viewsets.ModelViewSet):
                 telephone=telephone,
                 nom=request.user.nom_complet.split()[0],
                 prenom=" ".join(request.user.nom_complet.split()[1:]) or "-",
+                email=request.user.email,
                 notify_url=f"{settings.BASE_URL}/api/webhooks/cinetpay",
-                return_url=f"{settings.FRONTEND_URL}/coffres/{coffre.id}",
+                success_url=f"{settings.FRONTEND_URL}/coffres/{coffre.id}?paiement=succes",
+                failed_url=f"{settings.FRONTEND_URL}/coffres/{coffre.id}?paiement=echec",
             )
         except CinetPayError as e:
             transaction.statut = "echouee"
@@ -93,10 +95,12 @@ class CoffreViewSet(viewsets.ModelViewSet):
         if montant > coffre.solde_cache:
             return Response({"erreur": "Solde insuffisant."}, status=400)
 
+        reference = f"retrait-{uuid.uuid4().hex[:16]}"
         transaction = Transaction.objects.create(
             coffre=coffre, type="retrait", montant=montant,
             operateur=request.user.operateur_mobile_money,
             numero_telephone=request.user.telephone,
+            reference_agregateur=reference,
         )
         code = generer_otp()
         VerificationOtp.objects.create(
@@ -130,10 +134,11 @@ class CoffreViewSet(viewsets.ModelViewSet):
 
         client = CinetPayClient()
         try:
-            client.ajouter_contact(transaction.numero_telephone, request.user.nom_complet, "")
             resultat = client.envoyer_argent(
+                transaction_id=transaction.reference_agregateur,
                 telephone=transaction.numero_telephone,
                 montant=transaction.montant,
+                operateur=transaction.operateur,
                 notify_url=f"{settings.BASE_URL}/api/webhooks/cinetpay",
             )
         except CinetPayError as e:
