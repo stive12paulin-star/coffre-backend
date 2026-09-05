@@ -9,13 +9,16 @@ Le module SMS (OTP) necessite un compte separe du compte marchand,
 a demander a hello@cinetpay.com - pas encore actif a ce jour.
 """
 
+import logging
 import requests
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 BASE_URL = "https://api.cinetpay.net"
 BASE_CHECKOUT_URL = BASE_URL
 BASE_TRANSFER_URL = BASE_URL
-BASE_SMS_URL = BASE_URL
+BASE_SMS_URL = "https://api-notitia.cinetpay.com"
 
 CODES_OPERATEURS = {
     "orange": "OM_CI",
@@ -129,12 +132,21 @@ class CinetPayClient:
     def envoyer_sms(self, telephone, message, expediteur="COFFRE"):
         """
         Necessite un compte SMS CinetPay (distinct du compte marchand,
-        demande a hello@cinetpay.com). Pas encore actif a ce jour.
+        demande a hello@cinetpay.com).
+
+        Tant que CINETPAY_SMS_APIKEY n'est pas configuree (compte pas
+        encore actif), le SMS est simule : le code OTP est ecrit dans
+        les logs au lieu d'etre reellement envoye. Des que la cle sera
+        ajoutee sur Render, l'envoi reel s'activera automatiquement.
         """
+        if not self.apikey_sms:
+            logger.warning(f"[SMS SIMULE - compte CinetPay pas encore actif] to={telephone} message={message}")
+            return {"code": "SIMULATED", "message": message, "to": telephone}
+
         headers = {
             "Authorization": f"App {self.apikey_sms}",
             "Content-Type": "application/json",
         }
         payload = {"from": expediteur, "to": [telephone], "text": message}
-        reponse = requests.post(f"{BASE_SMS_URL}/text/single", json=payload, headers=headers, timeout=15)
+        reponse = requests.post(f"{BASE_SMS_URL}/sms/1/text/single", json=payload, headers=headers, timeout=15)
         return reponse.json()
