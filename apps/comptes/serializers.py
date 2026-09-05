@@ -7,6 +7,7 @@ from .models import Utilisateur
 class InscriptionSerializer(serializers.Serializer):
     nom_complet = serializers.CharField(max_length=150)
     telephone = serializers.CharField(max_length=20)
+    email = serializers.EmailField()
     mot_de_passe = serializers.CharField(write_only=True, validators=[validate_password])
     operateur_mobile_money = serializers.ChoiceField(choices=Utilisateur.OPERATEUR_CHOICES)
 

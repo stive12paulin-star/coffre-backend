@@ -19,6 +19,7 @@ class InscriptionView(APIView):
 
         utilisateur = Utilisateur.objects.create_user(
             telephone=donnees["telephone"],
+            email=donnees["email"],
             mot_de_passe=donnees["mot_de_passe"],
             nom_complet=donnees["nom_complet"],
             operateur_mobile_money=donnees["operateur_mobile_money"],
