@@ -45,8 +45,14 @@ class CinetPayClient:
         payload = {"api_key": self.api_key, "api_password": self.api_password}
         reponse = requests.post(f"{BASE_URL}/v1/oauth/login", json=payload, timeout=15)
         data = reponse.json()
-        self._token = data["access_token"]  # nom exact du champ a confirmer
-        return self._token
+        logger.warning(f"[DEBUG OAUTH] reponse brute recue : {data}")
+        for cle in ("access_token", "token", "accessToken", "jwt", "id_token"):
+            if cle in data:
+                self._token = data[cle]
+                return self._token
+        raise CinetPayError(
+            f"Champ du jeton introuvable dans la reponse OAuth. Cles disponibles : {list(data.keys())}"
+        )
 
     # ------------------------------------------------------------
     # ENCAISSEMENT (depot dans le coffre)
