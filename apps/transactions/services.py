@@ -1,27 +1,27 @@
-import logging
+import secrets
 
-from django.conf import settings
+from django.contrib.auth.hashers import make_password
+from django.db.models import Sum, Case, When, DecimalField, F
 
-logger = logging.getLogger(__name__)
+
+def generer_otp(longueur=6):
+    """Code numérique aléatoire cryptographiquement sûr (module secrets, pas random)."""
+    return "".join(secrets.choice("0123456789") for _ in range(longueur))
 
 
-def envoyer_sms_africastalking(telephone, message):
+def envoyer_sms(telephone, message):
     """
-    Envoie un SMS via Africa's Talking (application production "MonCoffre").
-
-    Tant que AT_API_KEY / AT_USERNAME ne sont pas configurees sur Render,
-    le SMS est simule et le code est ecrit dans les logs au lieu d'etre
-    reellement envoye.
+    Envoie un SMS via Africa's Talking (remplace CinetPay, dont le compte
+    SMS ne peut pas être activé sans structure légalement enregistrée).
     """
-    username = getattr(settings, "AT_USERNAME", "")
-    api_key = getattr(settings, "AT_API_KEY", "")
+    from .africastalking_client import envoyer_sms_africastalking
 
-    if not username or not api_key:
-        logger.warning(f"[SMS SIMULE - Africa's Talking pas configure] to={telephone} message={message}")
-        return {"simule": True, "to": telephone, "message": message}
+    return envoyer_sms_africastalking(telephone, message)
 
-    import africastalking
 
-    africastalking.initialize(username, api_key)
-    sms = africastalking.SMS
-    return sms.send(message, [telephone])
+def calculer_solde(coffre):
+    """
+    Recalcule le solde depuis le ledger (source de vérité), à comparer à
+    coffre.solde_cache pour détecter toute dérive.
+    """
+    from .models import Transaction  # import local pour éviter les imports circulaires
