@@ -1,47 +1,27 @@
-import secrets
+import logging
 
-from django.contrib.auth.hashers import make_password
-from django.db.models import Sum, Case, When, DecimalField, F
+from django.conf import settings
 
-
-def generer_otp(longueur=6):
-    """Code numérique aléatoire cryptographiquement sûr (module secrets, pas random)."""
-    return "".join(secrets.choice("0123456789") for _ in range(longueur))
+logger = logging.getLogger(__name__)
 
 
-def envoyer_sms(telephone, message):
+def envoyer_sms_africastalking(telephone, message):
     """
-    Envoie un SMS via le compte SMS CinetPay (distinct du compte marchand).
+    Envoie un SMS via Africa's Talking (application production "MonCoffre").
 
-    En local (DEBUG=True) sans CINETPAY_SMS_APIKEY configurée, affiche le
-    message dans la console au lieu d'échouer — permet de tester le parcours
-    inscription/OTP sans attendre l'ouverture du compte SMS chez CinetPay.
+    Tant que AT_API_KEY / AT_USERNAME ne sont pas configurees sur Render,
+    le SMS est simule et le code est ecrit dans les logs au lieu d'etre
+    reellement envoye.
     """
-    from django.conf import settings
+    username = getattr(settings, "AT_USERNAME", "")
+    api_key = getattr(settings, "AT_API_KEY", "")
 
-    if settings.DEBUG and not settings.CINETPAY_SMS_APIKEY:
-        print(f"[SMS simulé — DEBUG] à {telephone} : {message}")
-        return {"simule": True}
+    if not username or not api_key:
+        logger.warning(f"[SMS SIMULE - Africa's Talking pas configure] to={telephone} message={message}")
+        return {"simule": True, "to": telephone, "message": message}
 
-    from apps.paiements.services.cinetpay_client import CinetPayClient
+    import africastalking
 
-    return CinetPayClient().envoyer_sms(telephone, message)
-
-
-def calculer_solde(coffre):
-    """
-    Recalcule le solde depuis le ledger (source de vérité), à comparer à
-    coffre.solde_cache pour détecter toute dérive.
-    """
-    from .models import Transaction  # import local pour éviter les imports circulaires
-
-    total = Transaction.objects.filter(coffre=coffre, statut="reussie").aggregate(
-        solde=Sum(
-            Case(
-                When(type="depot", then="montant"),
-                When(type__in=["retrait", "penalite"], then=-1 * F("montant")),
-                output_field=DecimalField(),
-            )
-        )
-    )["solde"]
-    return total or 0
+    africastalking.initialize(username, api_key)
+    sms = africastalking.SMS
+    return sms.send(message, [telephone])
