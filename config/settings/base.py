@@ -103,6 +103,10 @@ CINETPAY_SITE_ID = env("CINETPAY_SITE_ID", default="")
 CINETPAY_TRANSFER_PASSWORD = env("CINETPAY_TRANSFER_PASSWORD", default="")
 CINETPAY_SMS_APIKEY = env("CINETPAY_SMS_APIKEY", default="")
 
+# --- Africa's Talking ---
+AT_USERNAME = env("AT_USERNAME", default="")
+AT_API_KEY = env("AT_API_KEY", default="")
+
 BASE_URL = env("BASE_URL", default="http://localhost:8000")
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
 
