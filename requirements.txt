@@ -28,6 +28,7 @@ requests==2.34.2
 six==1.17.0
 sqlparse==0.6.0
 tzdata==2026.3
+africastalking
 tzlocal==5.4.4
 urllib3==2.7.0
 vine==5.1.0
