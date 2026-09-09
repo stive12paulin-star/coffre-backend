@@ -41,4 +41,6 @@ def envoyer_sms_africastalking(telephone, message):
 
     africastalking.initialize(username, api_key)
     sms = africastalking.SMS
-    return sms.send(message, [telephone_e164])
+    resultat = sms.send(message, [telephone_e164])
+    logger.warning(f"[DEBUG AFRICASTALKING] reponse complete : {resultat}")
+    return resultat
